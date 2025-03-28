@@ -1,0 +1,143 @@
+Part 1: Configure OSPF MD5 Authentication
+For R1:
+Router(config)#router ospf 1 
+Router (config-router) #network 192.168.1.0 0.0.0.255 area 0 
+Router(config-router) #network 10.1.1.0 0.0.0.255 area 0 
+For R2:
+Router (config) #router ospf 1 
+Router (config-router) #network 10.1.1.0 0.0.0.255 area 0 
+Router(config-router) #network 10.2.2.0 0.0.0.255 area 0 
+For R3:
+Router(config)#router ospf 1 
+Router (config-router) #network 192.168.3.0 0.0.0.255 area 0 
+Router (config-router) #network 10.2.2.0 0.0.0.255 area 0 
+
+Step 1: Test connectivity. All devices should be able to ping all other IP addresses.
+Step 2: Configure OSPF MD5 authentication for all the routers in area 0. 
+R1(config)# router ospf 1
+R1(config-router)# area 0 authentication message-digest
+
+R2(config)# router ospf 1
+R2(config-router)# area 0 authentication message-digest
+
+R3(config)# router ospf 1
+R3(config-router)# area 0 authentication message-digest
+
+Step 3: Configure the MD5 key for all the routers in area 0
+
+R1(config)# interface s0/0/0
+R1(config-if)# ip ospf message-digest-key 1 md5 MD5pa55
+R2(config)# interface s0/0/0
+R2(config-if)# ip ospf message-digest-key 1 md5 MD5pa55
+R2(config-if)# interface s0/0/1
+R2(config-if)# ip ospf message-digest-key 1 md5 MD5pa55
+R3(config)# interface s0/0/1
+R3(config-if)# ip ospf message-digest-key 1 md5 MD5pa55
+
+Step 4: Verify configurations.
+a. Verify the MD5 authentication configurations using the commands show ip ospf interface.
+
+all router R1,R2,R3
+#show ip ospf interface
+
+
+Part 2: Configure NTP
+
+Step 1: Enable NTP authentication on PC-A.
+a. On PC-A, click NTP under the Services tab to verify NTP service is enabled.
+b. To configure NTP authentication, click Enable under Authentication. 
+Use key 1 and password NTPpa55
+
+
+Step 2: Configure R1, R2, and R3 as NTP clients.
+R1(config)# ntp server 192.168.1.5
+R2(config)# ntp server 192.168.1.5
+R3(config)# ntp server 192.168.1.5
+
+Verify client configuration using the command show ntp status.
+
+all router R1,R2,R3
+#show ntp status
+
+Step 3: Configure routers to update hardware clock.
+R1(config)# ntp update-calendar
+R2(config)# ntp update-calendar
+R3(config)# ntp update-calendar
+
+all router R1,R2,R3
+#show clock
+
+Step 4: Configure NTP authentication on the routers.
+R1(config)# ntp authenticate
+R1(config)# ntp trusted-key 1
+R1(config)# ntp authentication-key 1 md5 NTPpa55
+R2(config)# ntp authenticate
+R2(config)# ntp trusted-key 1
+R2(config)# ntp authentication-key 1 md5 NTPpa55
+R3(config)# ntp authenticate
+R3(config)# ntp trusted-key 1
+R3(config)# ntp authentication-key 1 md5 NTPpa55
+
+Step 5: Configure routers to timestamp log messages.
+
+R1(config)# service timestamps log datetime msec
+R2(config)# service timestamps log datetime msec
+R3(config)# service timestamps log datetime msec
+
+
+
+Part 3: Configure Syslog Server
+Step 1: 
+
+R1(config)# logging host 192.168.1.6
+R2(config)# logging host 192.168.1.6
+R3(config)# logging host 192.168.1.6
+
+Step 2: Verify logging configuration.
+all router R1,R2,R3
+#show logging 
+
+
+
+Part 4: Configure R3 to Support SSH
+
+Step 1: Configure a domain name. 
+
+R3(config)# ip domain-name ccnasecurity.com
+
+Step 2: Configure users for login to the SSH server on R3.
+
+R3(config)# username SSHadmin privilege 15 secret ciscosshpa55
+
+Step 3: Configure the incoming vty lines on R3.
+
+R3(config)# line vty 0 4
+R3(config-line)# login local
+R3(config-line)# transport input ssh
+
+Step 4: Erase existing key pairs on R3.
+
+R3(config)# crypto key zeroize rsa
+
+Step 5: Generate the RSA encryption key pair for R3
+R3(config)# crypto key generate rsa
+How many bits in the modulus [512]: 1024
+
+Step 6: Verify the SSH configuration.
+#show ip ssh 
+
+Step 7: Configure SSH timeouts and authentication parameters.
+
+R3(config)# ip ssh time-out 90
+R3(config)# ip ssh authentication-retries 2
+R3(config)# ip ssh version 2
+
+Step 8: Attempt to connect to R3 via Telnet from PC-C
+PC> telnet 192.168.3.1
+Step 9: Connect to R3 using SSH on PC-C.
+PC> ssh –l SSHadmin 192.168.3.1
+Step 10: Connect to R3 using SSH on R2.
+R2# ssh –v 2 –l SSHadmin 10.2.2.1
+
+
+
